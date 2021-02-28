@@ -9,7 +9,7 @@ import collections
 import torch
 from torch import nn
 from torch.nn import functional as F
-from ssd.utils.model_zoo import load_state_dict_from_url
+from SSD.ssd.utils.model_zoo import load_state_dict_from_url
 
 ########################################################################
 ############### HELPERS FUNCTIONS FOR MODEL ARCHITECTURE ###############
@@ -18,15 +18,35 @@ from ssd.utils.model_zoo import load_state_dict_from_url
 
 # Parameters for the entire model (stem, all blocks, and head)
 
-GlobalParams = collections.namedtuple('GlobalParams', [
-    'batch_norm_momentum', 'batch_norm_epsilon', 'dropout_rate',
-    'num_classes', 'width_coefficient', 'depth_coefficient',
-    'depth_divisor', 'min_depth', 'drop_connect_rate', ])
+GlobalParams = collections.namedtuple(
+    'GlobalParams',
+    [
+        'batch_norm_momentum',
+        'batch_norm_epsilon',
+        'dropout_rate',
+        'num_classes',
+        'width_coefficient',
+        'depth_coefficient',
+        'depth_divisor',
+        'min_depth',
+        'drop_connect_rate',
+    ],
+)
 
 # Parameters for an individual model block
-BlockArgs = collections.namedtuple('BlockArgs', [
-    'kernel_size', 'num_repeat', 'input_filters', 'output_filters',
-    'expand_ratio', 'id_skip', 'stride', 'se_ratio'])
+BlockArgs = collections.namedtuple(
+    'BlockArgs',
+    [
+        'kernel_size',
+        'num_repeat',
+        'input_filters',
+        'output_filters',
+        'expand_ratio',
+        'id_skip',
+        'stride',
+        'se_ratio',
+    ],
+)
 
 # Change namedtuple defaults
 GlobalParams.__new__.__defaults__ = (None,) * len(GlobalParams._fields)
@@ -63,11 +83,14 @@ def round_repeats(repeats, global_params):
 
 def drop_connect(inputs, p, training):
     """ Drop connect. """
-    if not training: return inputs
+    if not training:
+        return inputs
     batch_size = inputs.shape[0]
     keep_prob = 1 - p
     random_tensor = keep_prob
-    random_tensor += torch.rand([batch_size, 1, 1, 1], dtype=inputs.dtype, device=inputs.device)
+    random_tensor += torch.rand(
+        [batch_size, 1, 1, 1], dtype=inputs.dtype, device=inputs.device
+    )
     binary_tensor = torch.floor(random_tensor)
     output = inputs / keep_prob * binary_tensor
     return output
@@ -76,8 +99,19 @@ def drop_connect(inputs, p, training):
 class Conv2dSamePadding(nn.Conv2d):
     """ 2D Convolutions like TensorFlow """
 
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, dilation=1, groups=1, bias=True):
-        super().__init__(in_channels, out_channels, kernel_size, stride, 0, dilation, groups, bias)
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        kernel_size,
+        stride=1,
+        dilation=1,
+        groups=1,
+        bias=True,
+    ):
+        super().__init__(
+            in_channels, out_channels, kernel_size, stride, 0, dilation, groups, bias
+        )
         self.stride = self.stride if len(self.stride) == 2 else [self.stride[0]] * 2
 
     def forward(self, x):
@@ -88,8 +122,18 @@ class Conv2dSamePadding(nn.Conv2d):
         pad_h = max((oh - 1) * self.stride[0] + (kh - 1) * self.dilation[0] + 1 - ih, 0)
         pad_w = max((ow - 1) * self.stride[1] + (kw - 1) * self.dilation[1] + 1 - iw, 0)
         if pad_h > 0 or pad_w > 0:
-            x = F.pad(x, [pad_w // 2, pad_w - pad_w // 2, pad_h // 2, pad_h - pad_h // 2])
-        return F.conv2d(x, self.weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
+            x = F.pad(
+                x, [pad_w // 2, pad_w - pad_w // 2, pad_h // 2, pad_h - pad_h // 2]
+            )
+        return F.conv2d(
+            x,
+            self.weight,
+            self.bias,
+            self.stride,
+            self.padding,
+            self.dilation,
+            self.groups,
+        )
 
 
 ########################################################################
@@ -130,8 +174,9 @@ class BlockDecoder(object):
                 options[key] = value
 
         # Check stride
-        assert (('s' in options and len(options['s']) == 1) or
-                (len(options['s']) == 2 and options['s'][0] == options['s'][1]))
+        assert ('s' in options and len(options['s']) == 1) or (
+            len(options['s']) == 2 and options['s'][0] == options['s'][1]
+        )
 
         return BlockArgs(
             kernel_size=int(options['k']),
@@ -141,7 +186,8 @@ class BlockDecoder(object):
             expand_ratio=int(options['e']),
             id_skip=('noskip' not in block_string),
             se_ratio=float(options['se']) if 'se' in options else None,
-            stride=[int(options['s'][0])])
+            stride=[int(options['s'][0])],
+        )
 
     @staticmethod
     def _encode_block_string(block):
@@ -152,7 +198,7 @@ class BlockDecoder(object):
             's%d%d' % (block.strides[0], block.strides[1]),
             'e%s' % block.expand_ratio,
             'i%d' % block.input_filters,
-            'o%d' % block.output_filters
+            'o%d' % block.output_filters,
         ]
         if 0 < block.se_ratio <= 1:
             args.append('se%s' % block.se_ratio)
@@ -188,14 +234,21 @@ class BlockDecoder(object):
         return block_strings
 
 
-def efficientnet(width_coefficient=None, depth_coefficient=None,
-                 dropout_rate=0.2, drop_connect_rate=0.2):
+def efficientnet(
+    width_coefficient=None,
+    depth_coefficient=None,
+    dropout_rate=0.2,
+    drop_connect_rate=0.2,
+):
     """ Creates a efficientnet model. """
 
     blocks_args = [
-        'r1_k3_s11_e1_i32_o16_se0.25', 'r2_k3_s22_e6_i16_o24_se0.25',
-        'r2_k5_s22_e6_i24_o40_se0.25', 'r3_k3_s22_e6_i40_o80_se0.25',
-        'r3_k5_s11_e6_i80_o112_se0.25', 'r4_k5_s22_e6_i112_o192_se0.25',
+        'r1_k3_s11_e1_i32_o16_se0.25',
+        'r2_k3_s22_e6_i16_o24_se0.25',
+        'r2_k5_s22_e6_i24_o40_se0.25',
+        'r3_k3_s22_e6_i40_o80_se0.25',
+        'r3_k5_s11_e6_i80_o112_se0.25',
+        'r4_k5_s22_e6_i112_o192_se0.25',
         'r1_k3_s11_e6_i192_o320_se0.25',
     ]
     blocks_args = BlockDecoder.decode(blocks_args)
@@ -210,7 +263,7 @@ def efficientnet(width_coefficient=None, depth_coefficient=None,
         width_coefficient=width_coefficient,
         depth_coefficient=depth_coefficient,
         depth_divisor=8,
-        min_depth=None
+        min_depth=None,
     )
 
     return blocks_args, global_params
@@ -221,7 +274,9 @@ def get_model_params(model_name, override_params):
     if model_name.startswith('efficientnet'):
         w, d, _, p = efficientnet_params(model_name)
         # note: all models have drop connect rate = 0.2
-        blocks_args, global_params = efficientnet(width_coefficient=w, depth_coefficient=d, dropout_rate=p)
+        blocks_args, global_params = efficientnet(
+            width_coefficient=w, depth_coefficient=d, dropout_rate=p
+        )
     else:
         raise NotImplementedError('model name is not pre-defined: %s' % model_name)
     if override_params:

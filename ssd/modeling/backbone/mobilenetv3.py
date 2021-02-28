@@ -13,8 +13,8 @@ arXiv preprint arXiv:1905.02244.
 import torch.nn as nn
 import math
 
-from ssd.modeling import registry
-from ssd.utils.model_zoo import load_state_dict_from_url
+from SSD.ssd.modeling import registry
+from SSD.ssd.utils.model_zoo import load_state_dict_from_url
 
 model_urls = {
     'mobilenet_v3': 'https://github.com/d-li14/mobilenetv3.pytorch/raw/master/pretrained/mobilenetv3-large-1cd25616.pth',
@@ -67,7 +67,7 @@ class SELayer(nn.Module):
             nn.Linear(channel, _make_divisible(channel // reduction, 8)),
             nn.ReLU(inplace=True),
             nn.Linear(_make_divisible(channel // reduction, 8), channel),
-            h_sigmoid()
+            h_sigmoid(),
         )
 
     def forward(self, x):
@@ -79,17 +79,13 @@ class SELayer(nn.Module):
 
 def conv_3x3_bn(inp, oup, stride):
     return nn.Sequential(
-        nn.Conv2d(inp, oup, 3, stride, 1, bias=False),
-        nn.BatchNorm2d(oup),
-        h_swish()
+        nn.Conv2d(inp, oup, 3, stride, 1, bias=False), nn.BatchNorm2d(oup), h_swish()
     )
 
 
 def conv_1x1_bn(inp, oup):
     return nn.Sequential(
-        nn.Conv2d(inp, oup, 1, 1, 0, bias=False),
-        nn.BatchNorm2d(oup),
-        h_swish()
+        nn.Conv2d(inp, oup, 1, 1, 0, bias=False), nn.BatchNorm2d(oup), h_swish()
     )
 
 
@@ -103,7 +99,15 @@ class InvertedResidual(nn.Module):
         if inp == hidden_dim:
             self.conv = nn.Sequential(
                 # dw
-                nn.Conv2d(hidden_dim, hidden_dim, kernel_size, stride, (kernel_size - 1) // 2, groups=hidden_dim, bias=False),
+                nn.Conv2d(
+                    hidden_dim,
+                    hidden_dim,
+                    kernel_size,
+                    stride,
+                    (kernel_size - 1) // 2,
+                    groups=hidden_dim,
+                    bias=False,
+                ),
                 nn.BatchNorm2d(hidden_dim),
                 h_swish() if use_hs else nn.ReLU(inplace=True),
                 # Squeeze-and-Excite
@@ -119,7 +123,15 @@ class InvertedResidual(nn.Module):
                 nn.BatchNorm2d(hidden_dim),
                 h_swish() if use_hs else nn.ReLU(inplace=True),
                 # dw
-                nn.Conv2d(hidden_dim, hidden_dim, kernel_size, stride, (kernel_size - 1) // 2, groups=hidden_dim, bias=False),
+                nn.Conv2d(
+                    hidden_dim,
+                    hidden_dim,
+                    kernel_size,
+                    stride,
+                    (kernel_size - 1) // 2,
+                    groups=hidden_dim,
+                    bias=False,
+                ),
                 nn.BatchNorm2d(hidden_dim),
                 # Squeeze-and-Excite
                 SELayer(hidden_dim) if use_se else nn.Identity(),
@@ -137,7 +149,7 @@ class InvertedResidual(nn.Module):
 
 
 class MobileNetV3(nn.Module):
-    def __init__(self, mode='large', num_classes=1000, width_mult=1.):
+    def __init__(self, mode='large', num_classes=1000, width_mult=1.0):
         super(MobileNetV3, self).__init__()
         # setting of inverted residual blocks
         self.cfgs = [
@@ -156,7 +168,8 @@ class MobileNetV3(nn.Module):
             [3, 6, 112, 1, 1, 1],
             [5, 6, 160, 1, 1, 2],
             [5, 6, 160, 1, 1, 1],
-            [5, 6, 160, 1, 1, 1]]
+            [5, 6, 160, 1, 1, 1],
+        ]
 
         assert mode in ['large', 'small']
 
@@ -169,17 +182,29 @@ class MobileNetV3(nn.Module):
         for k, t, c, use_se, use_hs, s in self.cfgs:
             output_channel = _make_divisible(c * width_mult, 8)
             exp_size = _make_divisible(input_channel * t, 8)
-            layers.append(block(input_channel, exp_size, output_channel, k, s, use_se, use_hs))
+            layers.append(
+                block(input_channel, exp_size, output_channel, k, s, use_se, use_hs)
+            )
             input_channel = output_channel
         # building last several layers
         layers.append(conv_1x1_bn(input_channel, exp_size))
         self.features = nn.Sequential(*layers)
-        self.extras = nn.ModuleList([
-            InvertedResidual(960, _make_divisible(960 * 0.2, 8), 512, 3, 2, True, True),
-            InvertedResidual(512, _make_divisible(512 * 0.25, 8), 256, 3, 2, True, True),
-            InvertedResidual(256, _make_divisible(256 * 0.5, 8), 256, 3, 2, True, True),
-            InvertedResidual(256, _make_divisible(256 * 0.25, 8), 64, 3, 2, True, True),
-        ])
+        self.extras = nn.ModuleList(
+            [
+                InvertedResidual(
+                    960, _make_divisible(960 * 0.2, 8), 512, 3, 2, True, True
+                ),
+                InvertedResidual(
+                    512, _make_divisible(512 * 0.25, 8), 256, 3, 2, True, True
+                ),
+                InvertedResidual(
+                    256, _make_divisible(256 * 0.5, 8), 256, 3, 2, True, True
+                ),
+                InvertedResidual(
+                    256, _make_divisible(256 * 0.25, 8), 64, 3, 2, True, True
+                ),
+            ]
+        )
 
         self.reset_parameters()
 
@@ -203,7 +228,7 @@ class MobileNetV3(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
+                m.weight.data.normal_(0, math.sqrt(2.0 / n))
                 if m.bias is not None:
                     m.bias.data.zero_()
             elif isinstance(m, nn.BatchNorm2d):
@@ -219,5 +244,7 @@ class MobileNetV3(nn.Module):
 def mobilenet_v3(cfg, pretrained=True):
     model = MobileNetV3()
     if pretrained:
-        model.load_state_dict(load_state_dict_from_url(model_urls['mobilenet_v3']), strict=False)
+        model.load_state_dict(
+            load_state_dict_from_url(model_urls['mobilenet_v3']), strict=False
+        )
     return model

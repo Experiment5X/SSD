@@ -6,9 +6,9 @@ import time
 import torch
 import torch.distributed as dist
 
-from ssd.engine.inference import do_evaluation
-from ssd.utils import dist_util
-from ssd.utils.metric_logger import MetricLogger
+from SSD.ssd.engine.inference import do_evaluation
+from SSD.ssd.utils import dist_util
+from SSD.ssd.utils.metric_logger import MetricLogger
 
 
 def write_metric(eval_result, prefix, summary_writer, global_step):
@@ -46,15 +46,10 @@ def reduce_loss_dict(loss_dict):
     return reduced_losses
 
 
-def do_train(cfg, model,
-             data_loader,
-             optimizer,
-             scheduler,
-             checkpointer,
-             device,
-             arguments,
-             args):
-    logger = logging.getLogger("SSD.trainer")
+def do_train(
+    cfg, model, data_loader, optimizer, scheduler, checkpointer, device, arguments, args
+):
+    logger = logging.getLogger("SSD.ssd.trainer")
     logger.info("Start training ...")
     meters = MetricLogger()
 
@@ -100,13 +95,15 @@ def do_train(cfg, model,
             eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
             if device == "cuda":
                 logger.info(
-                    meters.delimiter.join([
-                        "iter: {iter:06d}",
-                        "lr: {lr:.5f}",
-                        '{meters}',
-                        "eta: {eta}",
-                        'mem: {mem}M',
-                    ]).format(
+                    meters.delimiter.join(
+                        [
+                            "iter: {iter:06d}",
+                            "lr: {lr:.5f}",
+                            '{meters}',
+                            "eta: {eta}",
+                            'mem: {mem}M',
+                        ]
+                    ).format(
                         iter=iteration,
                         lr=optimizer.param_groups[0]['lr'],
                         meters=str(meters),
@@ -116,12 +113,9 @@ def do_train(cfg, model,
                 )
             else:
                 logger.info(
-                    meters.delimiter.join([
-                        "iter: {iter:06d}",
-                        "lr: {lr:.5f}",
-                        '{meters}',
-                        "eta: {eta}",
-                    ]).format(
+                    meters.delimiter.join(
+                        ["iter: {iter:06d}", "lr: {lr:.5f}", '{meters}', "eta: {eta}",]
+                    ).format(
                         iter=iteration,
                         lr=optimizer.param_groups[0]['lr'],
                         meters=str(meters),
@@ -130,24 +124,47 @@ def do_train(cfg, model,
                 )
             if summary_writer:
                 global_step = iteration
-                summary_writer.add_scalar('losses/total_loss', losses_reduced, global_step=global_step)
+                summary_writer.add_scalar(
+                    'losses/total_loss', losses_reduced, global_step=global_step
+                )
                 for loss_name, loss_item in loss_dict_reduced.items():
-                    summary_writer.add_scalar('losses/{}'.format(loss_name), loss_item, global_step=global_step)
-                summary_writer.add_scalar('lr', optimizer.param_groups[0]['lr'], global_step=global_step)
+                    summary_writer.add_scalar(
+                        'losses/{}'.format(loss_name),
+                        loss_item,
+                        global_step=global_step,
+                    )
+                summary_writer.add_scalar(
+                    'lr', optimizer.param_groups[0]['lr'], global_step=global_step
+                )
 
         if iteration % args.save_step == 0:
             checkpointer.save("model_{:06d}".format(iteration), **arguments)
 
-        if args.eval_step > 0 and iteration % args.eval_step == 0 and not iteration == max_iter:
-            eval_results = do_evaluation(cfg, model, distributed=args.distributed, iteration=iteration)
+        if (
+            args.eval_step > 0
+            and iteration % args.eval_step == 0
+            and not iteration == max_iter
+        ):
+            eval_results = do_evaluation(
+                cfg, model, distributed=args.distributed, iteration=iteration
+            )
             if dist_util.get_rank() == 0 and summary_writer:
                 for eval_result, dataset in zip(eval_results, cfg.DATASETS.TEST):
-                    write_metric(eval_result['metrics'], 'metrics/' + dataset, summary_writer, iteration)
+                    write_metric(
+                        eval_result['metrics'],
+                        'metrics/' + dataset,
+                        summary_writer,
+                        iteration,
+                    )
             model.train()  # *IMPORTANT*: change to train mode after eval.
 
     checkpointer.save("model_final", **arguments)
     # compute training time
     total_training_time = int(time.time() - start_training_time)
     total_time_str = str(datetime.timedelta(seconds=total_training_time))
-    logger.info("Total training time: {} ({:.4f} s / it)".format(total_time_str, total_training_time / max_iter))
+    logger.info(
+        "Total training time: {} ({:.4f} s / it)".format(
+            total_time_str, total_training_time / max_iter
+        )
+    )
     return model

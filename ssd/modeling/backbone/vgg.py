@@ -1,16 +1,16 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ssd.layers import L2Norm
-from ssd.modeling import registry
-from ssd.utils.model_zoo import load_state_dict_from_url
+from SSD.ssd.layers import L2Norm
+from SSD.ssd.modeling import registry
+from SSD.ssd.utils.model_zoo import load_state_dict_from_url
 
 model_urls = {
     'vgg': 'https://s3.amazonaws.com/amdegroot-models/vgg16_reducedfc.pth',
 }
 
 
-# borrowed from https://github.com/amdegroot/ssd.pytorch/blob/master/ssd.py
+# borrowed from https://github.com/amdegroot/SSD.ssd.pytorch/blob/master/SSD.ssd.py
 def add_vgg(cfg, batch_norm=False):
     layers = []
     in_channels = 3
@@ -29,8 +29,7 @@ def add_vgg(cfg, batch_norm=False):
     pool5 = nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
     conv6 = nn.Conv2d(512, 1024, kernel_size=3, padding=6, dilation=6)
     conv7 = nn.Conv2d(1024, 1024, kernel_size=1)
-    layers += [pool5, conv6,
-               nn.ReLU(inplace=True), conv7, nn.ReLU(inplace=True)]
+    layers += [pool5, conv6, nn.ReLU(inplace=True), conv7, nn.ReLU(inplace=True)]
     return layers
 
 
@@ -42,7 +41,15 @@ def add_extras(cfg, i, size=300):
     for k, v in enumerate(cfg):
         if in_channels != 'S':
             if v == 'S':
-                layers += [nn.Conv2d(in_channels, cfg[k + 1], kernel_size=(1, 3)[flag], stride=2, padding=1)]
+                layers += [
+                    nn.Conv2d(
+                        in_channels,
+                        cfg[k + 1],
+                        kernel_size=(1, 3)[flag],
+                        stride=2,
+                        padding=1,
+                    )
+                ]
             else:
                 layers += [nn.Conv2d(in_channels, v, kernel_size=(1, 3)[flag])]
             flag = not flag
@@ -54,10 +61,44 @@ def add_extras(cfg, i, size=300):
 
 
 vgg_base = {
-    '300': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'C', 512, 512, 512, 'M',
-            512, 512, 512],
-    '512': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'C', 512, 512, 512, 'M',
-            512, 512, 512],
+    '300': [
+        64,
+        64,
+        'M',
+        128,
+        128,
+        'M',
+        256,
+        256,
+        256,
+        'C',
+        512,
+        512,
+        512,
+        'M',
+        512,
+        512,
+        512,
+    ],
+    '512': [
+        64,
+        64,
+        'M',
+        128,
+        128,
+        'M',
+        256,
+        256,
+        256,
+        'C',
+        512,
+        512,
+        512,
+        'M',
+        512,
+        512,
+        512,
+    ],
 }
 extras_base = {
     '300': [256, 'S', 512, 128, 'S', 256, 128, 256, 128, 256],

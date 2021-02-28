@@ -5,17 +5,17 @@ import os
 import torch
 import torch.utils.data
 
-from ssd.config import cfg
-from ssd.engine.inference import do_evaluation
-from ssd.modeling.detector import build_detection_model
-from ssd.utils import dist_util
-from ssd.utils.checkpoint import CheckPointer
-from ssd.utils.dist_util import synchronize
-from ssd.utils.logger import setup_logger
+from SSD.ssd.config import cfg
+from SSD.ssd.engine.inference import do_evaluation
+from SSD.ssd.modeling.detector import build_detection_model
+from SSD.ssd.utils import dist_util
+from SSD.ssd.utils.checkpoint import CheckPointer
+from SSD.ssd.utils.dist_util import synchronize
+from SSD.ssd.utils.logger import setup_logger
 
 
 def evaluation(cfg, ckpt, distributed):
-    logger = logging.getLogger("SSD.inference")
+    logger = logging.getLogger("SSD.ssd.inference")
 
     model = build_detection_model(cfg)
     checkpointer = CheckPointer(model, save_dir=cfg.OUTPUT_DIR, logger=logger)
@@ -26,7 +26,9 @@ def evaluation(cfg, ckpt, distributed):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='SSD Evaluation on VOC and COCO dataset.')
+    parser = argparse.ArgumentParser(
+        description='SSD Evaluation on VOC and COCO dataset.'
+    )
     parser.add_argument(
         "--config-file",
         default="",
@@ -42,7 +44,12 @@ def main():
         type=str,
     )
 
-    parser.add_argument("--output_dir", default="eval_results", type=str, help="The directory to store evaluation results.")
+    parser.add_argument(
+        "--output_dir",
+        default="eval_results",
+        type=str,
+        help="The directory to store evaluation results.",
+    )
 
     parser.add_argument(
         "opts",

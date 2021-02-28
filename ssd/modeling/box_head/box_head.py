@@ -1,10 +1,10 @@
 from torch import nn
 import torch.nn.functional as F
 
-from ssd.modeling import registry
-from ssd.modeling.anchors.prior_box import PriorBox
-from ssd.modeling.box_head.box_predictor import make_box_predictor
-from ssd.utils import box_utils
+from SSD.ssd.modeling import registry
+from SSD.ssd.modeling.anchors.prior_box import PriorBox
+from SSD.ssd.modeling.box_head.box_predictor import make_box_predictor
+from SSD.ssd.utils import box_utils
 from .inference import PostProcessor
 from .loss import MultiBoxLoss
 
@@ -28,11 +28,10 @@ class SSDBoxHead(nn.Module):
 
     def _forward_train(self, cls_logits, bbox_pred, targets):
         gt_boxes, gt_labels = targets['boxes'], targets['labels']
-        reg_loss, cls_loss = self.loss_evaluator(cls_logits, bbox_pred, gt_labels, gt_boxes)
-        loss_dict = dict(
-            reg_loss=reg_loss,
-            cls_loss=cls_loss,
+        reg_loss, cls_loss = self.loss_evaluator(
+            cls_logits, bbox_pred, gt_labels, gt_boxes
         )
+        loss_dict = dict(reg_loss=reg_loss, cls_loss=cls_loss,)
         detections = (cls_logits, bbox_pred)
         return detections, loss_dict
 
@@ -41,7 +40,10 @@ class SSDBoxHead(nn.Module):
             self.priors = PriorBox(self.cfg)().to(bbox_pred.device)
         scores = F.softmax(cls_logits, dim=2)
         boxes = box_utils.convert_locations_to_boxes(
-            bbox_pred, self.priors, self.cfg.MODEL.CENTER_VARIANCE, self.cfg.MODEL.SIZE_VARIANCE
+            bbox_pred,
+            self.priors,
+            self.cfg.MODEL.CENTER_VARIANCE,
+            self.cfg.MODEL.SIZE_VARIANCE,
         )
         boxes = box_utils.center_form_to_corner_form(boxes)
         detections = (scores, boxes)

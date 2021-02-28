@@ -1,7 +1,7 @@
 # High quality, fast, modular reference implementation of SSD in PyTorch 1.0
 
 
-This repository implements [SSD (Single Shot MultiBox Detector)](https://arxiv.org/abs/1512.02325). The implementation is heavily influenced by the projects [ssd.pytorch](https://github.com/amdegroot/ssd.pytorch), [pytorch-ssd](https://github.com/qfgaohao/pytorch-ssd) and [maskrcnn-benchmark](https://github.com/facebookresearch/maskrcnn-benchmark). This repository aims to be the code base for researches based on SSD.
+This repository implements [SSD (Single Shot MultiBox Detector)](https://arxiv.org/abs/1512.02325). The implementation is heavily influenced by the projects [SSD.ssd.pytorch](https://github.com/amdegroot/SSD.ssd.pytorch), [pytorch-ssd](https://github.com/qfgaohao/pytorch-ssd) and [maskrcnn-benchmark](https://github.com/facebookresearch/maskrcnn-benchmark). This repository aims to be the code base for researches based on SSD.ssd.
 
 <div align="center">
   <img src="figures/004545.jpg" width="500px" />
@@ -37,7 +37,7 @@ This repository implements [SSD (Single Shot MultiBox Detector)](https://arxiv.o
 ### Step-by-step installation
 
 ```bash
-git clone https://github.com/lufficc/SSD.git
+git clone https://github.com/lufficc/SSD.ssd.git
 cd SSD
 # Required packages: torch torchvision yacs tqdm opencv-python vizer
 pip install -r requirements.txt

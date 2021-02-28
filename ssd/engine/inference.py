@@ -5,11 +5,11 @@ import torch
 import torch.utils.data
 from tqdm import tqdm
 
-from ssd.data.build import make_data_loader
-from ssd.data.datasets.evaluation import evaluate
+from SSD.ssd.data.build import make_data_loader
+from SSD.ssd.data.datasets.evaluation import evaluate
 
-from ssd.utils import dist_util, mkdir
-from ssd.utils.dist_util import synchronize, is_main_process
+from SSD.ssd.utils import dist_util, mkdir
+from SSD.ssd.utils.dist_util import synchronize, is_main_process
 
 
 def _accumulate_predictions_from_multiple_gpus(predictions_per_gpu):
@@ -23,7 +23,7 @@ def _accumulate_predictions_from_multiple_gpus(predictions_per_gpu):
     # convert a dict where the key is the index in a list
     image_ids = list(sorted(predictions.keys()))
     if len(image_ids) != image_ids[-1] + 1:
-        logger = logging.getLogger("SSD.inference")
+        logger = logging.getLogger("SSD.ssd.inference")
         logger.warning(
             "Number of images that were gathered from multiple processes is not "
             "a contiguous set. Some images might be missing from the evaluation"
@@ -49,9 +49,17 @@ def compute_on_dataset(model, data_loader, device):
     return results_dict
 
 
-def inference(model, data_loader, dataset_name, device, output_folder=None, use_cached=False, **kwargs):
+def inference(
+    model,
+    data_loader,
+    dataset_name,
+    device,
+    output_folder=None,
+    use_cached=False,
+    **kwargs
+):
     dataset = data_loader.dataset
-    logger = logging.getLogger("SSD.inference")
+    logger = logging.getLogger("SSD.ssd.inference")
     logger.info("Evaluating {} dataset({} images):".format(dataset_name, len(dataset)))
     predictions_path = os.path.join(output_folder, 'predictions.pth')
     if use_cached and os.path.exists(predictions_path):
@@ -64,7 +72,9 @@ def inference(model, data_loader, dataset_name, device, output_folder=None, use_
         return
     if output_folder:
         torch.save(predictions, predictions_path)
-    return evaluate(dataset=dataset, predictions=predictions, output_dir=output_folder, **kwargs)
+    return evaluate(
+        dataset=dataset, predictions=predictions, output_dir=output_folder, **kwargs
+    )
 
 
 @torch.no_grad()
@@ -79,6 +89,8 @@ def do_evaluation(cfg, model, distributed, **kwargs):
         output_folder = os.path.join(cfg.OUTPUT_DIR, "inference", dataset_name)
         if not os.path.exists(output_folder):
             mkdir(output_folder)
-        eval_result = inference(model, data_loader, dataset_name, device, output_folder, **kwargs)
+        eval_result = inference(
+            model, data_loader, dataset_name, device, output_folder, **kwargs
+        )
         eval_results.append(eval_result)
     return eval_results

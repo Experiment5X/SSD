@@ -6,7 +6,7 @@ For example, create `ssd/data/datasets/my_dataset.py`:
 ```python
 import torch.utils.data
 
-from ssd.structures.container import Container
+from SSD.ssd.structures.container import Container
 
 class MyDataset(torch.utils.data.Dataset):
     def __init__(self, ..., transform=None, target_transform=None):
@@ -84,13 +84,13 @@ if isinstance(dataset, MyDataset):
 
 ## Custom Backbone
 
-It very simple to add your own backbone for SSD.
+It very simple to add your own backbone for SSD.ssd.
 For example, create `ssd/modeling/backbone/my_backbone.py`:
 ```python
 import torch.nn as nn
 
-from ssd.modeling import registry
-from ssd.utils.model_zoo import load_state_dict_from_url
+from SSD.ssd.modeling import registry
+from SSD.ssd.utils.model_zoo import load_state_dict_from_url
 
 
 class MyBackbone(nn.Module):

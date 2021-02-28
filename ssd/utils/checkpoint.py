@@ -4,19 +4,21 @@ import os
 import torch
 from torch.nn.parallel import DistributedDataParallel
 
-from ssd.utils.model_zoo import cache_url
+from SSD.ssd.utils.model_zoo import cache_url
 
 
 class CheckPointer:
     _last_checkpoint_name = 'last_checkpoint.txt'
 
-    def __init__(self,
-                 model,
-                 optimizer=None,
-                 scheduler=None,
-                 save_dir="",
-                 save_to_disk=None,
-                 logger=None):
+    def __init__(
+        self,
+        model,
+        optimizer=None,
+        scheduler=None,
+        save_dir="",
+        save_to_disk=None,
+        logger=None,
+    ):
         self.model = model
         self.optimizer = optimizer
         self.scheduler = scheduler
