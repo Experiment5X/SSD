@@ -46,6 +46,7 @@ class SSDBoxHead(nn.Module):
             self.cfg.MODEL.SIZE_VARIANCE,
         )
         boxes = box_utils.center_form_to_corner_form(boxes)
-        detections = (scores, boxes)
-        detections = self.post_processor(detections)
-        return detections, {}
+        detections_raw = (scores, boxes)
+        detections = self.post_processor(detections_raw)
+
+        return detections_raw, detections, {}
